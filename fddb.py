@@ -4,70 +4,75 @@ import os
 
 
 class Directory(object):
-    def __init__(self, path_string):
-        self.path_string = path_string
-        self.directory = os.fsencode(path_string)
+    def __init__(self, pathString):
+        self.pathString = pathString
+        self.directory = os.fsencode(pathString)
     def ls(self):
         return os.listdir(self.directory)
     def pathTo(self, file):
-        return self.path_string + os.fsdecode(file)
+        return self.pathString + os.fsdecode(file)
 
 
-info_dir = Directory("FDDB_Labels/")
-img_dir_str = "FDDB_Images/"
+annotationsDirectory = Directory("FDDB_Labels/")
+imagePathString = "FDDB_Images/"
 
-"""-------------------------------"""
-paths = []
-faces = []
+"""This section organizes data from the annotations directory.
+---paths to images are placed in allPaths
+---face descriptors are placed in allFaces, and grouped if there is more than one face in an image
+   Everything is still just strings."""
 
-group = []
-for doc in info_dir.ls():
-    with open(info_dir.pathTo(doc)) as text:
+allPaths = []
+allFaces = []
+
+imageFaces = []
+for doc in annotationsDirectory.ls():
+    with open(annotationsDirectory.pathTo(doc)) as text:
         doc = text.readlines()
 
     for line in doc:
         if "/" in line:
-            if len(group) is not 0:
-                faces.append(group)
-                group = []
-            paths.append(img_dir_str + line[:-1] + ".jpg")
+            if len(imageFaces) is not 0:
+                allFaces.append(imageFaces)
+                imageFaces = []
+            allPaths.append(imagePathString + line[:-1] + ".jpg")
         elif "  " in line:
-            group.append(line.split(" ")[:5])
+            imageFaces.append(line.split(" ")[:5])
 
-faces.append(group)# have to add the final group since if "/" doesn't run again
-"""-------------------------------"""
+allFaces.append(imageFaces)# have to add the final imageFaces since if "/" doesn't run again
 
-shrink_iters = 0
-divisor = 2**shrink_iters
+"""This section processes the strings in allPaths and allFaces with OpenCV.
+   Numpy then saves 2 files, 1 with raw images and the other with face regions highlighted.
+   Size is 256x256."""
 
-finalImages = np.zeros((len(paths), 256, 256), dtype = "float32")
-finalMasks = np.zeros((len(paths), 256, 256), dtype = "float32")
+shrinkIterations = 0
+divisor = 2**shrinkIterations
+
+images = np.zeros((len(allPaths), 256, 256, 3), dtype = "float32")
+highlights = np.zeros((len(allPaths), 256, 256), dtype = "float32")
 
 count = 0
-for path, face in zip(paths, faces):
-    img = cv2.imread(path)
+for path, imageFaces in zip(allPaths, allFaces):
+    image = cv2.imread(path)# obtain actual image at specified path
 
-    for i in range(shrink_iters):
-        img = cv2.pyrDown(img)
+    for i in range(shrinkIterations):# shrink the image
+        image = cv2.pyrDown(image)
 
-    mask = np.zeros_like(img)
+    highlight = np.zeros_like(image)# prepare for highlighting
 
-    for individual in face:
-        maj_axis, min_axis, ang, x, y = individual
-        x = int(float(x))
-        y = int(float(y))
-        maj_axis = int(float(maj_axis))
-        min_axis = int(float(min_axis))
-        ang = int(float(ang)*180/3.14)
-        cv2.ellipse(mask, (x//divisor, y//divisor), (maj_axis//divisor, min_axis//divisor), ang, 0, 360, 255, -1)
+    for face in imageFaces:
+        face = [float(i) for i in face]# convert from strings to floats
+        face[2] = face[2]*180/3.14# convert from radians to degrees
+        maj_axis, min_axis, angle, x, y = [int(i) for i in face]# get ints to make OpenCV happy
+
+        cv2.ellipse(highlight, (x//divisor, y//divisor), (maj_axis//divisor, min_axis//divisor), angle, 0, 360, (255, 255, 255), -1)
 
     try:
-        finalImages[count] = cv2.cvtColor(img[:256, :256], cv2.COLOR_BGR2GRAY).astype("float32")/255.
-        finalMasks[count] = mask[:256, :256, 0].astype("float32")/255.
+        images[count] = image[:256, :256].astype("float32")/255.
+        highlights[count] = highlight[:256, :256, 0].astype("float32")/255.
         count += 1
     except ValueError:
         continue
 
 
-np.save("finalImages.npy", finalImages)
-np.save("finalMasks.npy", finalMasks)
+np.save("Dataset Silo/images.npy", images[:count])
+np.save("Dataset Silo/highlights.npy", highlights[:count])

@@ -24,56 +24,36 @@ class UNet(object):
         return self._CommonConv(filters, name, kernel_size = 2)(up)
 
     def _CommonMerge(self, a, b):
-        #return layers.merge([a, b], mode = "concat", concat_axis = 3)#DEPRECATED
         return layers.Concatenate(axis = 3)([a, b])
 
     def create_model(self, source_shape, num_class):
-        inputs = layers.Input(shape = source_shape)
+        inputs = layers.Input(shape = source_shape)#256x256
 
-        conv1 = self._CommonConv(32, "conv1_1")(inputs)
-        conv1 = self._CommonConv(32, "conv1_2")(conv1)
-        pool1 = self._CommonPool()(conv1)
+        conv1 = self._CommonConv(32, "conv1_1")(inputs)#254x254
+        conv1 = self._CommonConv(32, "conv1_2")(conv1)#252x252
+        pool1 = self._CommonPool()(conv1)#126x126
 
-        conv2 = self._CommonConv(64, "conv2_1")(pool1)
-        conv2 = self._CommonConv(64, "conv2_2")(conv2)
-        pool2 = self._CommonPool()(conv2)
+        conv2 = self._CommonConv(64, "conv2_1")(pool1)#124x124
+        conv2 = self._CommonConv(64, "conv2_2")(conv2)#122x122
+        pool2 = self._CommonPool()(conv2)#61x61
 
-        conv3 = self._CommonConv(128, "conv3_1")(pool2)
-        conv3 = self._CommonConv(128, "conv3_2")(conv3)
-        pool3 = self._CommonPool()(conv3)
+        conv3 = self._CommonConv(128, "conv3_1")(pool2)#59x59
+        conv3 = self._CommonConv(128, "conv3_2")(conv3)#57x57
 
-        conv4 = self._CommonConv(256, "conv4_1")(pool3)
-        conv4 = self._CommonConv(256, "conv4_2")(conv4)
-        drop4 = layers.Dropout(0.5)(conv4)
-        pool4 = self._CommonPool()(drop4)
+        up4 = self._CommonDeconv(64, "up4", conv3)
+        merge4 = self._CommonMerge(conv2, up4)
+        conv4 = self._CommonConv(64, "conv4_1")(merge4)
+        conv4 = self._CommonConv(64, "conv4_2")(conv4)
 
-        conv5 = self._CommonConv(512, "conv5_1")(pool4)
-        conv5 = self._CommonConv(512, "conv5_2")(conv5)
-        drop5 = layers.Dropout(0.5)(conv5)
+        up5 = self._CommonDeconv(32, "up5", conv4)
+        merge5 = self._CommonMerge(conv1, up5)
+        conv5 = self._CommonConv(32, "conv5_1")(merge5)
+        conv5 = self._CommonConv(32, "conv5_2")(conv5)
 
-        up6 = self._CommonDeconv(256, "up6", drop5)
-        merge6 = self._CommonMerge(drop4, up6)
-        conv6 = self._CommonConv(256, "conv6_1")(merge6)
-        conv6 = self._CommonConv(256, "conv6_2")(conv6)
+        conv6 = layers.Conv2D(filters=num_class, kernel_size=1, activation="sigmoid")(conv5)
+        outputs = layers.Reshape((256, 256))(conv6)
 
-        up7 = self._CommonDeconv(128, "up7", conv6)
-        merge7 = self._CommonMerge(conv3, up7)
-        conv7 = self._CommonConv(128, "conv7_1")(merge7)
-        conv7 = self._CommonConv(128, "conv7_2")(conv7)
-
-        up8 = self._CommonDeconv(64, "up8", conv7)
-        merge8 = self._CommonMerge(conv2, up8)
-        conv8 = self._CommonConv(64, "conv8_1")(merge8)
-        conv8 = self._CommonConv(64, "conv8_2")(conv8)
-
-        up9 = self._CommonDeconv(32, "up9", conv8)
-        merge9 = self._CommonMerge(conv1, up9)
-        conv9 = self._CommonConv(32, "conv9_1")(merge9)
-        conv9 = self._CommonConv(32, "conv9_2")(conv9)
-
-        conv10 = layers.Conv2D(filters=num_class, kernel_size=1, activation="sigmoid")(conv9)
-
-        self.model = models.Model(inputs = inputs, outputs = conv10)
+        self.model = models.Model(inputs = inputs, outputs = outputs)
         print("UNet constructed")
 
     def compile(self):

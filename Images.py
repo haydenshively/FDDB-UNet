@@ -1,19 +1,19 @@
 import numpy as np
 import cv2
+import time
 
-source = np.load("predictions.npy")
-goal = np.load("comparisons.npy")
+predictions = np.load("Results/predictions.npy")
+truths = np.load("Results/truths.npy")
 
-print(goal.shape)
 
-image1 = source[3,:,:,0]*255
-goal1 = goal[3,:,:,0]*255
+for prediction, truth in zip(predictions, truths):
+    cv2.imshow("prediction", prediction)
+    cv2.imshow("truth", truth)
 
-while True:
-    cv2.imshow("img", image1.astype("uint8"))
-    cv2.imshow("act", goal1.astype("uint8"))
     ch = 0xFF & cv2.waitKey(1)
     if ch == 27:
         break
+
+    time.sleep(.5)
 
 cv2.destroyAllWindows()

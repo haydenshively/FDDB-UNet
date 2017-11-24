@@ -1,18 +1,19 @@
 from keras import models
 import numpy as np
 
-def load_data():
-    inputs = np.load("finalImages.npy")[2800:]
-    outputs = np.load("finalMasks.npy")[2800:]
-    testing_input = np.expand_dims(inputs, axis = -1)
-    desired_output = np.expand_dims(outputs, axis = -1)
-    return testing_input, desired_output
+def data(amount = None):
+    images = np.load("Dataset Silo/images.npy")
+    highlights = np.load("Dataset Silo/highlights.npy")
+    if amount is not None:
+        images = images[:amount]
+        highlights = highlights[:amount]
+    return images, highlights
 
-unet = models.load_model("unet taught.h5")
+unet = models.load_model("Model/unet.h5")
 
-inputs, outputs = load_data()
+images, highlights = data(50)
 
-predicts = unet.predict(inputs, verbose=1)
+predictions = unet.predict(images, verbose = 1)
 
-np.save("predictions.npy", predicts)
-np.save("comparisons.npy", outputs)
+np.save("Results/predictions.npy", predictions)
+np.save("Results/truths.npy", highlights)
