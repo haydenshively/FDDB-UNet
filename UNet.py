@@ -1,8 +1,10 @@
+"""
+MODEL DEFINITION
+Inspiration from https://github.com/zhixuhao/unet/blob/master/model.py
+"""
+
 from keras import layers, models
 from keras.optimizers import Adam
-
-"""https://github.com/zhixuhao/unet"""
-
 
 class UNet(object):
     def __init__(self, source_shape, num_class):
