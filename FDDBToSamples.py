@@ -74,5 +74,5 @@ for path, imageFaces in zip(allPaths, allFaces):
         continue
 
 
-np.save("Dataset Silo/images.npy", images[:count])
-np.save("Dataset Silo/highlights.npy", highlights[:count])
+np.save("Datasets/raw.npy", images[:count])
+np.save("Datasets/highlighted.npy", highlights[:count])
