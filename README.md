@@ -18,4 +18,5 @@ runs the trained model on a portion of the dataset and saves results to a file
 displays the saved results  
   
 ## Prerequisites
-Keras, OpenCV, numpy
+Keras, OpenCV, numpy  
+Dataset: http://vis-www.cs.umass.edu/fddb/
